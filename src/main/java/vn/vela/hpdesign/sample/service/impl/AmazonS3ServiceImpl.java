@@ -13,12 +13,16 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
@@ -104,10 +108,6 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
     return "Delete list file successfully";
   }
 
-  public String copyMultiFile(String sourcePath, String destinationPath, String filePath) {
-    return null;
-  }
-
   @Override
   public List<String> getAll(String folder) {
     AmazonS3 s3Client = buildS3Client();
@@ -119,6 +119,56 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
         .collect(
             Collectors.toList());
 
+  }
+
+  @Override
+  public String copyMultiFile(String sourceFolder, String destFolder) {
+    String commandCopy =
+        "aws2 s3 cp s3://" + bucketName + File.separator + sourceFolder + " s3://" + bucketName
+            + File.separator
+            + destFolder
+            + " --recursive";
+    runCommand(commandCopy);
+    return String.format("%s%s%s%s%s", "Copy all file from root folder: ", sourceFolder,
+        "to destination folder : ", destFolder, " successfully");
+  }
+
+  @Override
+  public String removeFilesInFolder(String sourceFolder) {
+    String commandRemove =
+        "aws2 s3 rm s3://" + bucketName + File.separator + sourceFolder + " --recursive";
+    String commandCreateFolder =
+        "aws2 s3api put-object --bucket " + bucketName + " --key " + sourceFolder
+            + File.separator;
+    runCommand(commandRemove);
+    log.info("remove all files in : " + sourceFolder + " successfully");
+    runCommand(commandCreateFolder);
+    log.info("create new folder : " + sourceFolder + " successfully");
+    return String
+        .format("%s%s%s", "Remove all file from root folder: ", sourceFolder, " successfully");
+  }
+
+  private void runCommand(String command) {
+    try {
+      Process proc = Runtime.getRuntime().exec(command);
+
+      // Read the output
+      InputStreamReader inputStreamReader = new InputStreamReader(proc.getInputStream(),
+          Charset.forName("UTF-8"));
+      BufferedReader reader = new BufferedReader(inputStreamReader);
+
+      String line;
+      while ((line = reader.readLine()) != null) {
+        log.info(line + "\n");
+      }
+      proc.waitFor();
+      reader.close();
+
+    } catch (Exception ex) {
+      log.error(
+          "Executed command has been fail with exception: " + Arrays.toString(ex.getStackTrace()));
+      throw new AmazonS3Exception("Run command was failed");
+    }
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(

@@ -52,11 +52,16 @@ public class S3Controller {
     return ResponseEntity.ok(amazonS3Service.getAll(folder));
   }
 
+  // Use command amazon cli
   @PostMapping("multi/copy")
   public ResponseEntity<String> copyMultiFile(@RequestParam String sourcePath,
-      @RequestParam String desPath,
-      @RequestParam String filePath) {
-    return ResponseEntity.ok(amazonS3Service.copyMultiFile(sourcePath, desPath, filePath));
+      @RequestParam String desPath) {
+    return ResponseEntity.ok(amazonS3Service.copyMultiFile(sourcePath, desPath));
+  }
+
+  @DeleteMapping("file-folder")
+  public ResponseEntity<String> removeAllFilesInFolder(@RequestParam String sourcePath) {
+    return ResponseEntity.ok(amazonS3Service.removeFilesInFolder(sourcePath));
   }
 
 }

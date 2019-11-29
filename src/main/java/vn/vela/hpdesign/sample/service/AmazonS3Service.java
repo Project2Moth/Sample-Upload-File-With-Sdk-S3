@@ -12,7 +12,9 @@ public interface AmazonS3Service {
 
   String copyFile(String pathFile, String sourcePath, String destinationPath);
 
-  String copyMultiFile(String sourcePath, String destinationPath, String filePath);
+  String copyMultiFile(String sourcePath, String destinationPath);
+
+  String removeFilesInFolder(String sourceFolder);
 
   String delete(String... filePaths);
 
