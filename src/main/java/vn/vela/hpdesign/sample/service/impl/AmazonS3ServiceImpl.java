@@ -81,6 +81,7 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
           .uploadFileList(bucketName, sourcePath, new File("."),
               files);
 
+      // Nguyen nhan do bi xoa 2 character dau tien
       // Sai ten file sau khi transfer qua new File(".")
       return "Upload successfully";
     } catch (AmazonServiceException e) {
