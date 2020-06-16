@@ -21,10 +21,16 @@ public class S3Controller {
   @Autowired
   private AmazonS3Service amazonS3Service;
 
-  @PostMapping("upload")
+  @PostMapping("upload")// with small file
   public String uploadFile(@RequestPart MultipartFile multipartFile,
       @RequestParam String sourcePath) {
     return amazonS3Service.uploadFile(multipartFile, sourcePath);
+  }
+
+  @PostMapping("upload-big-file")// with small file
+  public String uploadBigFile(@RequestPart MultipartFile multipartFile,
+      @RequestParam String keyFileName) {
+    return amazonS3Service.uploadBigFile(multipartFile, keyFileName);
   }
 
   @PostMapping("multi-upload")
