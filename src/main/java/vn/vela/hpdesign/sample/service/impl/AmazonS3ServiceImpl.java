@@ -1,6 +1,7 @@
 package vn.vela.hpdesign.sample.service.impl;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -13,23 +14,28 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.Upload;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import lombok.extern.log4j.Log4j2;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import vn.vela.hpdesign.sample.AmazonS3Exception;
 import vn.vela.hpdesign.sample.service.AmazonS3Service;
@@ -110,6 +116,45 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
   }
 
   @Override
+  public String uploadBigFile(MultipartFile multipartFile, String keyFileName) {
+
+    System.out.println("Start time: " + LocalDateTime.now());
+    Long start = System.currentTimeMillis();
+    String bucketName = "bucketName";
+
+    try {
+
+      // mặc định TransferManager sẽ sinh ra 10 thread để upload file
+      // tuy nhiên ta có thể control với số lượng thread khác tuỳ vào dung lượng file upload lên.
+      int maxUploadThreads = 5;
+      AmazonS3 s3Client = buildS3Client();
+      TransferManager tm = TransferManagerBuilder.standard()
+          .withS3Client(s3Client)
+          .withMultipartUploadThreshold(
+              (long) (5 * 1024 * 1025)) // Ngưỡng của phần chặt nhỏ file khi truyền đơn lẻ.
+          .withExecutorFactory(() -> Executors.newFixedThreadPool(maxUploadThreads))
+          .build();
+
+      // TransferManager processes all transfers asynchronously,
+      // so this call returns immediately.
+      Upload upload = tm.upload(bucketName, keyFileName, convert(multipartFile));
+      System.out.println("Object upload started");
+
+      // Optionally, wait for the upload to finish before continuing.
+      upload.waitForCompletion();
+      System.out.println("Object upload complete");
+    } catch (SdkClientException | IOException | InterruptedException e) {
+      // The call was transmitted successfully, but Amazon S3 couldn't process
+      // it, so it returned an error response.
+      e.printStackTrace();
+    }// Amazon S3 couldn't be contacted for a response, or the client
+    System.out.println("End time: " + LocalDateTime.now());
+    Long end = System.currentTimeMillis();
+    System.out.println("Eslaptime : " + (end - start));
+    return "Successfully";
+  }
+
+  @Override
   public List<String> getAll(String folder) {
     AmazonS3 s3Client = buildS3Client();
     ObjectListing objectListing = s3Client.listObjects(
@@ -172,6 +217,8 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
     }
   }
 
+
+  // method can use for covert small multipartfile
   @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
       value = {"NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE",
           "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE"},
@@ -209,5 +256,15 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
       log.error("Build connection to s3 client fail : " + Arrays.toString(e.getStackTrace()));
       throw new AmazonS3Exception();
     }
+  }
+
+  // method for convert big multipartfile
+  public File convert(MultipartFile file) throws IOException {
+    File convFile = new File(file.getOriginalFilename());
+    convFile.createNewFile();
+    try (InputStream is = file.getInputStream()) {
+      Files.copy(is, convFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    }
+    return convFile;
   }
 }

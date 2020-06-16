@@ -21,4 +21,6 @@ public interface AmazonS3Service {
   List<String> getAll(String folder);
 
   AmazonS3 buildS3Client();
+
+  String uploadBigFile(MultipartFile multipartFile, String keyFileName);
 }
