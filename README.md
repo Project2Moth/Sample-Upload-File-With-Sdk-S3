@@ -49,5 +49,7 @@ Example command:
 Copy all files in folder to another folder
 aws2 s3 mv s3://unity-test-1/release s3://unity-test-1/next_version —recursive
 
+//NOTICE : Không được phép đẩy thông tin của tài khoản amazon(accsessKey, secretKey) lên github public.
+
     
     
