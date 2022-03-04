@@ -15,6 +15,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
+import com.amazonaws.services.s3.transfer.ObjectCannedAclProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
@@ -93,10 +94,17 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
         files.add(convertMultiPartFileToFile(multipartFile));
       }
       TransferManager tm = TransferManagerBuilder.standard().withS3Client(buildS3Client()).build();
+
+      ObjectCannedAclProvider objectCannedAclProvider = new ObjectCannedAclProvider() {
+        @Override
+        public CannedAccessControlList provideObjectCannedAcl(File file) {
+          return CannedAccessControlList.PublicRead;
+        }
+      };
+
       MultipleFileUpload xfer = tm
           .uploadFileList(bucketName, sourcePath, new File("."),
-              files);
-
+              files, null, null, objectCannedAclProvider);
       // Nguyen nhan do bi xoa 2 character dau tien
       // Sai ten file sau khi transfer qua new File(".")
       return "Upload successfully";
