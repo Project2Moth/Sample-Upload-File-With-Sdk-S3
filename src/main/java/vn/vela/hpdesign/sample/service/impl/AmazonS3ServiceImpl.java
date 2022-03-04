@@ -7,10 +7,13 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
@@ -64,9 +67,16 @@ public class AmazonS3ServiceImpl implements AmazonS3Service {
         String fileName = file.getOriginalFilename() + "_" + LocalDateTime.now().format(
             DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"));
         log.debug(fileName);
-        s3Client
-            .putObject(bucketName, sourcePath + File.separator + fileName,
-                convertMultiPartFileToFile(file));
+
+        // Build metadata
+        ObjectMetadata data = new ObjectMetadata();
+        data.setContentType(file.getContentType());
+        data.setContentLength(file.getSize());
+
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName,
+            sourcePath + File.separator + fileName, file.getInputStream(), data);
+        putObjectRequest.withCannedAcl(CannedAccessControlList.PublicRead);
+        s3Client.putObject(putObjectRequest);
       }
       return "upload successfully";
     } catch (Exception e) {
